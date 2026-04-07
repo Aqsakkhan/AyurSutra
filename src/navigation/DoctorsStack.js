@@ -3,6 +3,8 @@ import { createNativeStackNavigator } from "@react-navigation/native-stack";
 
 import DoctorsScreen from "../screens/patient/DoctorsScreen";
 import AppointmentBookingScreen from "../screens/patient/AppointmentBookingScreen";
+import PatientDetailScreen from "../screens/doctor/PatientDetailScreen";
+import AddPrescriptionScreen from "../screens/doctor/AddPrescriptionScreen";
 
 const Stack = createNativeStackNavigator();
 

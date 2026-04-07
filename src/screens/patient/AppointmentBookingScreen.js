@@ -18,21 +18,64 @@ export default function AppointmentBookingScreen({ route, navigation }) {
   const [selectedDate, setSelectedDate] = useState(null);
   const [selectedTime, setSelectedTime] = useState(null);
 
+  const checkSlotAvailability = async (doctorId, date, time) => {
+    const q = query(
+      collection(db, "appointments"),
+      where("doctorId", "==", doctorId),
+      where("selectedDate", "==", date),
+      where("selectedTime", "==", time),
+      where("status", "in", ["pending", "accepted"]),
+    );
+
+    const snapshot = await getDocs(q);
+    return snapshot.empty;
+  };
+
+  // ❌ Check past time
+  const isPastTime = (selectedDate, selectedTime) => {
+    const now = new Date();
+
+    const [time, modifier] = selectedTime.split(" ");
+    let [hours, minutes] = time.split(":");
+
+    if (modifier === "PM" && hours !== "12") hours = parseInt(hours) + 12;
+    if (modifier === "AM" && hours === "12") hours = 0;
+
+    const selectedDateTime = new Date(selectedDate);
+    selectedDateTime.setHours(hours);
+    selectedDateTime.setMinutes(minutes);
+
+    return selectedDateTime < now; // ✅ FIXED (no "snow")
+  };
+
   const generateNext7Days = () => {
     const dates = [];
     const today = new Date();
 
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < 10; i++) {
       const nextDate = new Date();
       nextDate.setDate(today.getDate() + i);
-      dates.push(nextDate);
+
+      const day = nextDate.getDay();
+
+      if (day !== 0) {
+        // ❌ Skip Sunday
+        dates.push(nextDate);
+      }
     }
 
     return dates;
   };
 
   const availableDates = generateNext7Days();
-  const availableTimes = ["10:00 AM", "11:00 AM", "2:00 PM", "4:00 PM"];
+  const availableTimes = [
+    "10:00 AM",
+    "11:00 AM",
+    "12:00 PM",
+    "1:00 PM",
+    "4.00 PM",
+    "5.00 PM",
+  ];
 
   const bookAppointment = async () => {
     if (!selectedDate || !selectedTime) {
@@ -42,6 +85,18 @@ export default function AppointmentBookingScreen({ route, navigation }) {
 
     if (!doctor.isAvailable) {
       Alert.alert("Doctor is currently on leave");
+      return;
+    }
+
+    const day = new Date(selectedDate).getDay();
+    if (day === 0) {
+      Alert.alert("Doctor is not available on Sundays");
+      return;
+    }
+
+    // ❌ Prevent past time
+    if (isPastTime(selectedDate, selectedTime)) {
+      Alert.alert("Cannot book past time slots");
       return;
     }
 

@@ -7,7 +7,6 @@ import DoctorHomeScreen from "../screens/doctor/DoctorHomeScreen";
 import PatientsScreen from "../screens/doctor/PatientsScreen";
 import DoctorAppointmentsScreen from "../screens/doctor/DoctorAppointmentsScreen";
 import DoctorAppointmentDetailScreen from "../screens/doctor/DoctorAppointmentDetailScreen";
-import TherapyApprovalScreen from "../screens/doctor/TherapyApprovalScreen";
 import PatientsStack from "./PatientsStack";
 import DoctorProfileStack from "./DoctorProfileStack";
 

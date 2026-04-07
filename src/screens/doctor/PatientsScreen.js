@@ -42,7 +42,7 @@ const PatientsScreen = ({ navigation }) => {
         style={styles.card}
         onPress={() =>
           navigation.navigate("PatientDetail", {
-            patientId: item.patientId,
+            patient: item, // ✅ VERY IMPORTANT
           })
         }
       >

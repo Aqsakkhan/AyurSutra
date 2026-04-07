@@ -19,6 +19,7 @@ import {
 import { db } from "../../services/firebase";
 import { setDoc } from "firebase/firestore";
 import { AuthContext } from "../../context/AuthContext";
+import { scheduleNotification } from "../../services/notificationService";
 
 export default function DoctorAppointmentsScreen() {
   const { user } = useContext(AuthContext);
@@ -56,6 +57,11 @@ export default function DoctorAppointmentsScreen() {
 
       if (newStatus === "accepted") {
         const patientDocId = `${appointment.doctorId}_${appointment.patientId}`;
+        await scheduleNotification(
+          "Appointment Confirmed",
+          "Your appointment has been accepted by doctor",
+          2, // 2 seconds (for testing)
+        );
 
         await setDoc(
           doc(db, "doctorPatients", patientDocId),
@@ -132,8 +138,6 @@ export default function DoctorAppointmentsScreen() {
               <Text style={styles.btnText}>Reject</Text>
             </TouchableOpacity>
             <View style={styles.card}>
-              <Text>{item.patientName}</Text>
-
               {item.status === "accepted" && (
                 <TouchableOpacity>
                   <Text>Start Consultation</Text>
@@ -171,7 +175,7 @@ const styles = StyleSheet.create({
     backgroundColor: "#fff",
     padding: 16,
     borderRadius: 16,
-    marginBottom: 14,
+    marginBottom: 10,
     elevation: 2,
     marginTop: 20,
   },
@@ -191,21 +195,28 @@ const styles = StyleSheet.create({
   buttonRow: {
     flexDirection: "row",
     marginTop: 10,
+    alignItems: "center",
   },
   acceptBtn: {
     backgroundColor: "#2E7D32",
     padding: 10,
     borderRadius: 10,
     marginRight: 10,
+    width: 110,
+    height: 45,
   },
   rejectBtn: {
     backgroundColor: "#C62828",
     padding: 10,
     borderRadius: 10,
+    width: 110,
+    height: 45,
   },
   btnText: {
     color: "#fff",
     fontWeight: "600",
+    fontSize: 15,
+    textAlign: "center",
   },
   empty: {
     textAlign: "center",

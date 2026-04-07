@@ -6,6 +6,7 @@ import {
   FlatList,
   ScrollView,
   ActivityIndicator,
+  TouchableOpacity,
 } from "react-native";
 import {
   doc,
@@ -14,24 +15,50 @@ import {
   query,
   where,
   onSnapshot,
+  getDocs,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { useNavigation } from "@react-navigation/native";
 
 export default function PatientDetailScreen({ route }) {
-  const { patientId } = route.params;
-
+  const { patient } = route.params;
+  const navigation = useNavigation();
   const [patientInfo, setPatientInfo] = useState(null);
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [prescriptions, setPrescriptions] = useState([]);
 
   useEffect(() => {
     fetchPatientInfo();
     listenAppointments();
   }, []);
 
+  useEffect(() => {
+    fetchPrescriptions();
+  }, []);
+
+  const fetchPrescriptions = async () => {
+    try {
+      const q = query(
+        collection(db, "prescriptions"),
+        where("patientId", "==", patient.patientId),
+      );
+
+      const snapshot = await getDocs(q);
+
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setPrescriptions(data);
+    } catch (error) {
+      console.log("Prescription fetch error:", error);
+    }
+  };
   const fetchPatientInfo = async () => {
     try {
-      const docRef = doc(db, "users", patientId);
+      const docRef = doc(db, "users", patient.patientId);
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
@@ -45,7 +72,7 @@ export default function PatientDetailScreen({ route }) {
   const listenAppointments = () => {
     const q = query(
       collection(db, "appointments"),
-      where("patientId", "==", patientId),
+      where("patientId", "==", patient.patientId),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -133,6 +160,37 @@ export default function PatientDetailScreen({ route }) {
             </View>
           )}
         />
+      )}
+
+      <Text style={{ fontSize: 18, fontWeight: "bold", marginTop: 20 }}>
+        Prescription History
+      </Text>
+
+      {prescriptions.length === 0 ? (
+        <Text style={{ color: "gray", marginTop: 10 }}>
+          No prescriptions yet
+        </Text>
+      ) : (
+        prescriptions.map((item) => (
+          <View
+            key={item.id}
+            style={{
+              backgroundColor: "#fff",
+              padding: 12,
+              borderRadius: 10,
+              marginTop: 10,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ fontWeight: "bold" }}>{item.diagnosis}</Text>
+
+            <Text style={{ color: "gray", fontSize: 12 }}>
+              {item.createdAt
+                ? new Date(item.createdAt.seconds * 1000).toLocaleDateString()
+                : ""}
+            </Text>
+          </View>
+        ))
       )}
     </ScrollView>
   );

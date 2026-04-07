@@ -1,98 +1,119 @@
-import React, { useState } from "react";
-import {
-  View,
-  Text,
-  TextInput,
-  StyleSheet,
-  TouchableOpacity,
-  Alert,
-} from "react-native";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import React, { useState, useContext } from "react";
+import { View, Text, TextInput, TouchableOpacity, Alert } from "react-native";
+import { addDoc, collection, serverTimestamp } from "firebase/firestore";
+
 import { db } from "../../services/firebase";
+import { AuthContext } from "../../context/AuthContext";
 
 export default function AddPrescriptionScreen({ route, navigation }) {
-  const { appointment } = route.params;
+  const { appointment } = route.params || {};
+  const { user } = useContext(AuthContext);
 
   const [diagnosis, setDiagnosis] = useState("");
   const [medicines, setMedicines] = useState("");
   const [notes, setNotes] = useState("");
 
-  const savePrescription = async () => {
+  const handleSave = async () => {
+    if (!patient) {
+      return <Text>No patient data</Text>;
+    }
     if (!diagnosis || !medicines) {
-      Alert.alert("Please fill required fields");
+      Alert.alert("Error", "Please fill all required fields");
       return;
     }
 
     try {
       await addDoc(collection(db, "prescriptions"), {
+        doctorId: user.uid,
+        doctorName: user.fullName,
+        doctorSpecialization: user.specialization, // ✅ important
+        patientId: patient?.patientId || patient?.id,
+        patientName: patient.patientName,
         appointmentId: appointment.id,
-        doctorId: appointment.doctorId,
-        doctorName: appointment.doctorName,
-        patientId: appointment.patientId,
-        patientName: appointment.patientName,
+
         diagnosis,
         medicines,
         notes,
+
         createdAt: serverTimestamp(),
       });
 
-      Alert.alert("Prescription Saved");
+      Alert.alert("Success", "Prescription added successfully");
       navigation.goBack();
     } catch (error) {
       console.log(error);
+      Alert.alert("Error", "Something went wrong");
     }
   };
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>
-        Prescription for {appointment.patientName}
+    <View style={{ flex: 1, padding: 16 }}>
+      <Text style={{ fontSize: 20, fontWeight: "bold", marginBottom: 10 }}>
+        Add Prescription
       </Text>
 
+      {/* Diagnosis */}
+      <Text>Diagnosis</Text>
       <TextInput
-        placeholder="Diagnosis"
         value={diagnosis}
         onChangeText={setDiagnosis}
-        style={styles.input}
+        placeholder="Enter diagnosis"
+        style={{
+          borderWidth: 1,
+          borderColor: "#ccc",
+          padding: 10,
+          borderRadius: 8,
+          marginBottom: 10,
+        }}
       />
 
+      {/* Medicines */}
+      <Text>Medicines (comma separated)</Text>
       <TextInput
-        placeholder="Medicines"
         value={medicines}
         onChangeText={setMedicines}
-        style={styles.input}
-        multiline
+        placeholder="e.g. Ashwagandha, Triphala"
+        style={{
+          borderWidth: 1,
+          borderColor: "#ccc",
+          padding: 10,
+          borderRadius: 8,
+          marginBottom: 10,
+        }}
       />
 
+      {/* Notes */}
+      <Text>Notes</Text>
       <TextInput
-        placeholder="Notes (Optional)"
         value={notes}
         onChangeText={setNotes}
-        style={styles.input}
+        placeholder="Additional notes"
         multiline
+        style={{
+          borderWidth: 1,
+          borderColor: "#ccc",
+          padding: 10,
+          borderRadius: 8,
+          marginBottom: 20,
+          height: 80,
+        }}
       />
 
-      <TouchableOpacity style={styles.button} onPress={savePrescription}>
-        <Text style={styles.buttonText}>Save Prescription</Text>
+      {/* Save Button */}
+      <TouchableOpacity
+        style={{
+          backgroundColor: "#1B5E20",
+          padding: 15,
+          borderRadius: 10,
+        }}
+        onPress={handleSave}
+      >
+        <Text
+          style={{ color: "#fff", textAlign: "center", fontWeight: "bold" }}
+        >
+          Save Prescription
+        </Text>
       </TouchableOpacity>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, padding: 20, backgroundColor: "#F8FAFB" },
-  title: { fontSize: 18, fontWeight: "600", marginBottom: 20 },
-  input: {
-    backgroundColor: "#fff",
-    padding: 12,
-    borderRadius: 12,
-    marginBottom: 15,
-  },
-  button: {
-    backgroundColor: "#0B8FAC",
-    padding: 14,
-    borderRadius: 12,
-    alignItems: "center",
-  },
-  buttonText: { color: "#fff", fontWeight: "600" },
-});

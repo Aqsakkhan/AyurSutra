@@ -17,6 +17,7 @@ import {
   onSnapshot,
 } from "firebase/firestore";
 import { updateDoc, doc } from "firebase/firestore";
+import { generatePrescriptionPDF } from "../../services/pdfService";
 
 export default function PatientHome({ navigation }) {
   const { user, userData } = useContext(AuthContext);
@@ -26,6 +27,7 @@ export default function PatientHome({ navigation }) {
   const [unreadCount, setUnreadCount] = useState(0);
   const [totalConsultations, setTotalConsultations] = useState(0);
   const [recentAppointments, setRecentAppointments] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
 
   useEffect(() => {
     if (!user?.uid) return;
@@ -263,9 +265,12 @@ export default function PatientHome({ navigation }) {
           <Text style={styles.actionText}>Book Appointment</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.actionCard}>
+        <TouchableOpacity
+          style={styles.actionCard}
+          onPress={() => navigation.navigate("Prescriptions")}
+        >
           <Ionicons name="document-text-outline" size={28} color="#fff" />
-          <Text style={styles.actionText}>Prescription</Text>
+          <Text style={styles.actionText}>Prescriptions</Text>
         </TouchableOpacity>
 
         <TouchableOpacity
