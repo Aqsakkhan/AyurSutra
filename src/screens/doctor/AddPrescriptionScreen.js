@@ -14,8 +14,9 @@ export default function AddPrescriptionScreen({ route, navigation }) {
   const [notes, setNotes] = useState("");
 
   const handleSave = async () => {
-    if (!patient) {
-      return <Text>No patient data</Text>;
+    if (!appointment) {
+      Alert.alert("Error", "No appointment data");
+      return;
     }
     if (!diagnosis || !medicines) {
       Alert.alert("Error", "Please fill all required fields");
@@ -27,8 +28,8 @@ export default function AddPrescriptionScreen({ route, navigation }) {
         doctorId: user.uid,
         doctorName: user.fullName,
         doctorSpecialization: user.specialization, // ✅ important
-        patientId: patient?.patientId || patient?.id,
-        patientName: patient.patientName,
+        patientId: appointment.patientId,
+        patientName: appointment.patientName,
         appointmentId: appointment.id,
 
         diagnosis,

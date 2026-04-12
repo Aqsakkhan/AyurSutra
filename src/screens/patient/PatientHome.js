@@ -44,6 +44,29 @@ export default function PatientHome({ navigation }) {
 
     return () => unsubscribe();
   }, [user]);
+  useEffect(() => {
+    if (!user) return;
+
+    const q = query(
+      collection(db, "calls"),
+      where("patientId", "==", user.uid),
+      where("status", "==", "active"),
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const callData = snapshot.docs[0].data();
+
+        console.log("Incoming Call:", callData);
+
+        navigation.navigate("VideoCall", {
+          channelName: callData.channelName,
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [user]);
   // Prescription
   useEffect(() => {
     if (!user?.uid) return;

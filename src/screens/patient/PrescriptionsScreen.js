@@ -28,7 +28,7 @@ export default function PrescriptionsScreen() {
     try {
       const q = query(
         collection(db, "prescriptions"),
-        where("appointmentId", "==", selectedAppointmentId),
+        where("patientId", "==", user.uid),
       );
 
       const snapshot = await getDocs(q);

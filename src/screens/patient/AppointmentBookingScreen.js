@@ -7,6 +7,7 @@ import {
   Alert,
   ScrollView,
 } from "react-native";
+import { query, where, getDocs } from "firebase/firestore";
 import { AuthContext } from "../../context/AuthContext";
 import { db } from "../../services/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
@@ -75,6 +76,7 @@ export default function AppointmentBookingScreen({ route, navigation }) {
     "1:00 PM",
     "4.00 PM",
     "5.00 PM",
+    "8.45 PM",
   ];
 
   const bookAppointment = async () => {
@@ -87,7 +89,16 @@ export default function AppointmentBookingScreen({ route, navigation }) {
       Alert.alert("Doctor is currently on leave");
       return;
     }
+    const isAvailable = await checkSlotAvailability(
+      doctor.id,
+      selectedDate,
+      selectedTime,
+    );
 
+    if (!isAvailable) {
+      Alert.alert("Slot already booked");
+      return;
+    }
     const day = new Date(selectedDate).getDay();
     if (day === 0) {
       Alert.alert("Doctor is not available on Sundays");

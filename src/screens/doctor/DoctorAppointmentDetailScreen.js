@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../services/firebase";
+import { setDoc, serverTimestamp } from "firebase/firestore";
 
 export default function DoctorAppointmentDetailScreen({ route, navigation }) {
   const { appointment } = route.params;
@@ -49,6 +50,37 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
       console.log(error);
     }
   };
+  const startCall = async () => {
+    const callId = appointment.id;
+
+    await setDoc(doc(db, "calls", callId), {
+      appointmentId: appointment.id,
+      doctorId: appointment.doctorId,
+      patientId: appointment.patientId,
+      channelName: appointment.id,
+      status: "active",
+      createdAt: serverTimestamp(),
+    });
+
+    navigation.navigate("VideoCall", {
+      channelName: appointment.id,
+    });
+  };
+
+  const appointmentDateTime = new Date(
+    `${appointment.selectedDate}T${appointment.selectedTime}`,
+  );
+  const now = new Date();
+
+  // 5 minutes before
+  const startWindow = new Date(appointmentDateTime.getTime() - 5 * 60 * 1000);
+
+  // 30 minutes after (optional limit)
+  const endWindow = new Date(appointmentDateTime.getTime() + 30 * 60 * 1000);
+
+  const isCallAllowed = now >= startWindow && now <= endWindow;
+
+  const minutesLeft = Math.ceil((startWindow - now) / (60 * 1000));
 
   return (
     <ScrollView style={styles.container}>
@@ -72,7 +104,7 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
         <View style={styles.buttonRow}>
           <TouchableOpacity
             style={styles.approveBtn}
-            onPress={() => updateStatus("approved")}
+            onPress={() => updateStatus("accepted")}
           >
             <Text style={styles.btnText}>Accept</Text>
           </TouchableOpacity>
@@ -86,7 +118,7 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
         </View>
       )}
 
-      {appointment.status === "approved" && (
+      {appointment.status === "accepted" && (
         <>
           <Text style={styles.sectionTitle}>Consultation Notes</Text>
           <TextInput
@@ -96,7 +128,6 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
             value={notes}
             onChangeText={setNotes}
           />
-
           <Text style={styles.sectionTitle}>Prescription</Text>
           <TextInput
             style={styles.input}
@@ -105,13 +136,51 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
             value={prescription}
             onChangeText={setPrescription}
           />
+          {appointment?.status === "accepted" && (
+            <>
+              {/* 🔥 Start Video Call */}
+              <TouchableOpacity
+                disabled={!isCallAllowed}
+                onPress={startCall}
+                style={{
+                  backgroundColor: isCallAllowed ? "#1B5E20" : "#ccc",
+                  padding: 14,
+                  borderRadius: 10,
+                  marginTop: 10,
+                }}
+              >
+                <Text style={{ color: "#fff", textAlign: "center" }}>
+                  {isCallAllowed
+                    ? "Start Video Call"
+                    : `Available in ${minutesLeft > 0 ? minutesLeft : 0} min`}
+                </Text>
+              </TouchableOpacity>
 
+              {/* 💊 Add Prescription */}
+              <TouchableOpacity
+                style={{
+                  backgroundColor: "#007bff",
+                  padding: 12,
+                  borderRadius: 8,
+                  marginTop: 10,
+                }}
+                onPress={() =>
+                  navigation.navigate("AddPrescription", { appointment })
+                }
+              >
+                <Text style={{ color: "#fff", textAlign: "center" }}>
+                  Add Prescription
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity
             style={styles.completeBtn}
             onPress={completeConsultation}
           >
             <Text style={styles.btnText}>Mark as Completed</Text>
           </TouchableOpacity>
+
           <TouchableOpacity
             style={{
               backgroundColor: "#1B5E20",

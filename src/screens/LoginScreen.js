@@ -15,7 +15,7 @@ import { AuthContext } from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
   const { setUser } = useContext(AuthContext);
-
+  const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -26,6 +26,8 @@ export default function LoginScreen({ navigation }) {
     }
 
     try {
+      setLoading(true);
+
       const userCredential = await signInWithEmailAndPassword(
         auth,
         email,
@@ -39,9 +41,14 @@ export default function LoginScreen({ navigation }) {
         return;
       }
 
-      setUser(userDoc.data());
+      setUser({
+        uid: userCredential.user.uid,
+        ...userDoc.data(),
+      });
     } catch (error) {
-      Alert.alert("Invalid email or password");
+      Alert.alert("Login Failed", error.message);
+    } finally {
+      setLoading(false);
     }
   };
 

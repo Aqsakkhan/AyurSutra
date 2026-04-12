@@ -16,12 +16,14 @@ import {
   addDoc,
   serverTimestamp,
 } from "firebase/firestore";
+import { useNavigation } from "@react-navigation/native";
 import { db } from "../../services/firebase";
 import { setDoc } from "firebase/firestore";
 import { AuthContext } from "../../context/AuthContext";
 import { scheduleNotification } from "../../services/notificationService";
 
 export default function DoctorAppointmentsScreen() {
+  const navigation = useNavigation();
   const { user } = useContext(AuthContext);
   const [appointments, setAppointments] = useState([]);
 
@@ -114,14 +116,21 @@ export default function DoctorAppointmentsScreen() {
   const renderItem = ({ item }) => {
     return (
       <View style={styles.card}>
-        <Text style={styles.patientName}>{item.patientName}</Text>
+        {/* 🔹 CLICKABLE AREA */}
+        <TouchableOpacity
+          onPress={() =>
+            navigation.navigate("DoctorAppointmentDetail", {
+              appointment: item,
+            })
+          }
+        >
+          <Text style={styles.patientName}>{item.patientName}</Text>
+          <Text>Date: {item.selectedDate}</Text>
+          <Text>Time: {item.selectedTime}</Text>
+          <Text>Status: {item.status}</Text>
+        </TouchableOpacity>
 
-        <Text style={styles.info}>Date: {item.selectedDate}</Text>
-
-        <Text style={styles.info}>Time: {item.selectedTime}</Text>
-
-        <Text style={styles.status}>Status: {item.status}</Text>
-
+        {/* 🔹 ACTION BUTTONS */}
         {item.status === "pending" && (
           <View style={styles.buttonRow}>
             <TouchableOpacity
@@ -137,13 +146,6 @@ export default function DoctorAppointmentsScreen() {
             >
               <Text style={styles.btnText}>Reject</Text>
             </TouchableOpacity>
-            <View style={styles.card}>
-              {item.status === "accepted" && (
-                <TouchableOpacity>
-                  <Text>Start Consultation</Text>
-                </TouchableOpacity>
-              )}
-            </View>
           </View>
         )}
       </View>

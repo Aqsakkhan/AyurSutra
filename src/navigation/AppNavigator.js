@@ -9,6 +9,7 @@ import SignupScreen from "../screens/SignupScreen";
 import AIChatScreen from "../screens/AIChatScreen";
 import NotificationsScreen from "../screens/common/NotificationsScreen";
 import { TouchableOpacity } from "react-native";
+import VideoCallScreen from "../screens/common/VideoCallScreen";
 
 import PatientTabs from "./PatientTabs";
 import DoctorTabs from "./DoctorTabs";
@@ -44,6 +45,7 @@ export default function AppNavigator() {
             <Stack.Screen name="Chat" component={AIChatScreen} />
           </>
         )}
+        <Stack.Screen name="VideoCall" component={VideoCallScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );
