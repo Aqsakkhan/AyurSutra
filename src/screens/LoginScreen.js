@@ -7,14 +7,10 @@ import {
   TouchableOpacity,
   Alert,
 } from "react-native";
-import { auth } from "../services/firebase";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../services/firebase";
 import { AuthContext } from "../context/AuthContext";
 
 export default function LoginScreen({ navigation }) {
-  const { setUser } = useContext(AuthContext);
+  const { login } = useContext(AuthContext);
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -28,23 +24,7 @@ export default function LoginScreen({ navigation }) {
     try {
       setLoading(true);
 
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
-
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
-
-      if (!userDoc.exists()) {
-        Alert.alert("User data not found");
-        return;
-      }
-
-      setUser({
-        uid: userCredential.user.uid,
-        ...userDoc.data(),
-      });
+      await login(email.trim(), password);
     } catch (error) {
       Alert.alert("Login Failed", error.message);
     } finally {
@@ -60,6 +40,8 @@ export default function LoginScreen({ navigation }) {
         placeholder="Email"
         style={styles.input}
         onChangeText={setEmail}
+        autoCapitalize="none"
+        keyboardType="email-address"
       />
 
       <TextInput
@@ -69,8 +51,14 @@ export default function LoginScreen({ navigation }) {
         onChangeText={setPassword}
       />
 
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={{ color: "#fff" }}>Login</Text>
+      <TouchableOpacity
+        style={[styles.button, loading && styles.buttonDisabled]}
+        onPress={handleLogin}
+        disabled={loading}
+      >
+        <Text style={{ color: "#fff" }}>
+          {loading ? "Logging in..." : "Login"}
+        </Text>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -111,6 +99,9 @@ const styles = StyleSheet.create({
     padding: 15,
     borderRadius: 10,
     alignItems: "center",
+  },
+  buttonDisabled: {
+    opacity: 0.6,
   },
   linkText: {
     color: "#555",

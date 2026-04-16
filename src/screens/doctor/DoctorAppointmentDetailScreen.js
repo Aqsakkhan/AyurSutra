@@ -180,24 +180,6 @@ export default function DoctorAppointmentDetailScreen({ route, navigation }) {
           >
             <Text style={styles.btnText}>Mark as Completed</Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={{
-              backgroundColor: "#1B5E20",
-              padding: 10,
-              borderRadius: 8,
-              marginTop: 10,
-            }}
-            onPress={() =>
-              navigation.navigate("AddPrescription", {
-                appointment: item, // ✅ pass full appointment
-              })
-            }
-          >
-            <Text style={{ color: "#fff", textAlign: "center" }}>
-              Add Prescription
-            </Text>
-          </TouchableOpacity>
         </>
       )}
     </ScrollView>

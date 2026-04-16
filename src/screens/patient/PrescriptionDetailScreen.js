@@ -1,3 +1,4 @@
+// src/screens/patient/PrescriptionDetailScreen.js
 import React from "react";
 import { View, Text, TouchableOpacity, ScrollView } from "react-native";
 import { generatePrescriptionPDF } from "../../services/pdfService";
@@ -5,9 +6,12 @@ import { generatePrescriptionPDF } from "../../services/pdfService";
 export default function PrescriptionDetailScreen({ route }) {
   const { prescription } = route.params;
 
+  const medicinesStructured = Array.isArray(prescription.medicinesStructured)
+    ? prescription.medicinesStructured
+    : [];
+
   return (
     <ScrollView style={{ flex: 1, padding: 16, backgroundColor: "#f5f5f5" }}>
-      {/* Header */}
       <Text
         style={{
           fontSize: 24,
@@ -19,7 +23,6 @@ export default function PrescriptionDetailScreen({ route }) {
         Prescription Details
       </Text>
 
-      {/* Doctor Info */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -32,7 +35,6 @@ export default function PrescriptionDetailScreen({ route }) {
         <Text style={{ color: "gray", marginTop: 5 }}>
           {prescription.doctorSpecialization || "Ayurvedic Specialist"}
         </Text>
-
         <Text style={{ color: "gray", marginTop: 5 }}>
           Date:{" "}
           {prescription.createdAt
@@ -41,9 +43,11 @@ export default function PrescriptionDetailScreen({ route }) {
               ).toLocaleDateString()
             : ""}
         </Text>
+        <Text style={{ color: "#1E3A8A", marginTop: 5, fontWeight: "600" }}>
+          Verification ID: {prescription.verificationCode || "Not available"}
+        </Text>
       </View>
 
-      {/* Diagnosis */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -57,7 +61,6 @@ export default function PrescriptionDetailScreen({ route }) {
         <Text>{prescription.diagnosis}</Text>
       </View>
 
-      {/* Medicines */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -68,7 +71,16 @@ export default function PrescriptionDetailScreen({ route }) {
         }}
       >
         <Text style={{ fontWeight: "bold", marginBottom: 5 }}>Medicines</Text>
-        {prescription.medicines ? (
+        {medicinesStructured.length > 0 ? (
+          medicinesStructured.map((med, index) => (
+            <View key={`${med.name}-${index}`} style={{ marginBottom: 8 }}>
+              <Text style={{ fontWeight: "700" }}>• {med.name}</Text>
+              {!!med.dosage && <Text>Dosage: {med.dosage}</Text>}
+              {!!med.frequency && <Text>Frequency: {med.frequency}</Text>}
+              {!!med.days && <Text>Duration: {med.days} days</Text>}
+            </View>
+          ))
+        ) : prescription.medicines ? (
           prescription.medicines.split(",").map((med, index) => (
             <Text key={index} style={{ marginBottom: 5 }}>
               • {med.trim()}
@@ -79,7 +91,6 @@ export default function PrescriptionDetailScreen({ route }) {
         )}
       </View>
 
-      {/* Notes */}
       <View
         style={{
           backgroundColor: "#fff",
@@ -90,10 +101,9 @@ export default function PrescriptionDetailScreen({ route }) {
         }}
       >
         <Text style={{ fontWeight: "bold", marginBottom: 5 }}>Notes</Text>
-        <Text>{prescription.notes}</Text>
+        <Text>{prescription.notes || "No additional notes"}</Text>
       </View>
 
-      {/* Download Button */}
       <TouchableOpacity
         style={{
           backgroundColor: "#1B5E20",

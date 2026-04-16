@@ -1,3 +1,4 @@
+// src/screens/patient/TherapyDetailsScreen.js
 import React, { useState, useEffect, useContext } from "react";
 import {
   View,
@@ -14,21 +15,25 @@ import * as Location from "expo-location";
 import {
   collection,
   getDocs,
-  addDoc,
   query,
   where,
-  serverTimestamp,
   updateDoc,
   doc,
 } from "firebase/firestore";
 import { db } from "../../services/firebase";
 import { AuthContext } from "../../context/AuthContext";
+import { createTherapyBookingWithPayment } from "../../services/appointmentService";
+
+const THERAPY_PAYMENT_METHODS = [
+  { key: "upi", label: "UPI" },
+  { key: "card", label: "Card" },
+  { key: "netbanking", label: "Net Banking" },
+];
 
 export default function TherapyDetailScreen({ route, navigation }) {
   const { therapy } = route.params;
   const { user } = useContext(AuthContext);
 
-  // ================= STATE =================
   const [loading, setLoading] = useState(false);
   const [locationLoading, setLocationLoading] = useState(true);
   const [centers, setCenters] = useState([]);
@@ -38,8 +43,8 @@ export default function TherapyDetailScreen({ route, navigation }) {
   const [showPicker, setShowPicker] = useState(false);
   const [existingBooking, setExistingBooking] = useState(null);
   const [prescriptionUploaded, setPrescriptionUploaded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("upi");
 
-  // ================= INIT =================
   useEffect(() => {
     initialize();
   }, []);
@@ -49,7 +54,6 @@ export default function TherapyDetailScreen({ route, navigation }) {
     await fetchLocationAndCenters();
   };
 
-  // ================= EXISTING BOOKING =================
   const checkExistingBooking = async () => {
     const q = query(
       collection(db, "therapyBookings"),
@@ -71,7 +75,6 @@ export default function TherapyDetailScreen({ route, navigation }) {
     }
   };
 
-  // ================= LOCATION + CENTERS =================
   const fetchLocationAndCenters = async () => {
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -87,7 +90,7 @@ export default function TherapyDetailScreen({ route, navigation }) {
 
       const snapshot = await getDocs(collection(db, "centers"));
       let centerList = snapshot.docs
-        .map((doc) => ({ id: doc.id, ...doc.data() }))
+        .map((docItem) => ({ id: docItem.id, ...docItem.data() }))
         .filter((c) => c.isActive);
 
       centerList = centerList.map((center) => {
@@ -126,7 +129,6 @@ export default function TherapyDetailScreen({ route, navigation }) {
     return R * c;
   };
 
-  // ================= SCHEDULE =================
   const generateSchedule = (startDate) => {
     const sessions = [];
     for (let i = 0; i < therapy.totalSessions; i++) {
@@ -137,7 +139,6 @@ export default function TherapyDetailScreen({ route, navigation }) {
     return sessions;
   };
 
-  // ================= BOOK =================
   const handleBooking = async () => {
     if (therapy.consultationRequired && !prescriptionUploaded) {
       Alert.alert(
@@ -146,6 +147,7 @@ export default function TherapyDetailScreen({ route, navigation }) {
       );
       return;
     }
+
     if (!selectedDate || !selectedCenter) {
       Alert.alert("Error", "Please select date and center");
       return;
@@ -159,22 +161,15 @@ export default function TherapyDetailScreen({ route, navigation }) {
     try {
       setLoading(true);
 
-      const bookingData = {
-        patientId: user.uid,
-        therapyId: therapy?.id || "unknown",
-        therapyName: therapy?.name || "Therapy",
-        centerId: selectedCenter.id,
-        centerName: selectedCenter.name,
-        centerAddress: selectedCenter.address,
-        firstSessionDate: selectedDate.toISOString(),
-        consultationRequired: therapy?.consultationRequired || false,
-        status: therapy?.consultationRequired
-          ? "awaiting_prescription"
-          : "confirmed",
-        createdAt: serverTimestamp(),
-      };
-
-      await addDoc(collection(db, "therapyBookings"), bookingData);
+      await createTherapyBookingWithPayment({
+        therapy,
+        user,
+        selectedCenter,
+        selectedDate,
+        consultationRequired: therapy?.consultationRequired,
+        paymentMethod,
+        schedule,
+      });
 
       Alert.alert("Success", "Booking submitted successfully");
       navigation.navigate("Home");
@@ -186,7 +181,6 @@ export default function TherapyDetailScreen({ route, navigation }) {
     setLoading(false);
   };
 
-  // ================= CANCEL =================
   const cancelBooking = async () => {
     setLoading(true);
     await updateDoc(doc(db, "therapyBookings", existingBooking.id), {
@@ -198,67 +192,52 @@ export default function TherapyDetailScreen({ route, navigation }) {
     setLoading(false);
   };
 
-  // ================= UI =================
   return (
     <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {" "}
-      {/* PREMIUM HERO */}{" "}
       <View style={styles.hero}>
-        {" "}
         <View style={styles.heroTop}>
-          {" "}
-          <Text style={styles.title}>{therapy?.name}</Text>{" "}
+          <Text style={styles.title}>{therapy?.name}</Text>
           <View style={styles.badge}>
-            {" "}
-            <Text style={styles.badgeText}>{therapy?.category}</Text>{" "}
-          </View>{" "}
-        </View>{" "}
-        <Text style={styles.description}>{therapy?.shortDescription}</Text>{" "}
+            <Text style={styles.badgeText}>{therapy?.category}</Text>
+          </View>
+        </View>
+        <Text style={styles.description}>{therapy?.shortDescription}</Text>
         <View style={styles.priceBox}>
-          {" "}
-          <Text style={styles.priceLabel}>Program Cost</Text>{" "}
-          <Text style={styles.price}>₹ {therapy?.cost}</Text>{" "}
-        </View>{" "}
-      </View>{" "}
-      {/* OVERVIEW */}{" "}
+          <Text style={styles.priceLabel}>Program Cost</Text>
+          <Text style={styles.price}>₹ {therapy?.cost}</Text>
+        </View>
+      </View>
+
       <View style={styles.card}>
-        {" "}
-        <Text style={styles.sectionTitle}>🌿 Overview</Text>{" "}
-        <Text style={styles.text}>{therapy?.overview}</Text>{" "}
-      </View>{" "}
-      {/* BENEFITS */}{" "}
+        <Text style={styles.sectionTitle}>🌿 Overview</Text>
+        <Text style={styles.text}>{therapy?.overview}</Text>
+      </View>
+
       <View style={styles.card}>
-        {" "}
-        <Text style={styles.sectionTitle}>✨ Benefits</Text>{" "}
+        <Text style={styles.sectionTitle}>✨ Benefits</Text>
         {therapy?.benefits?.map((item, index) => (
           <Text key={index} style={styles.benefit}>
-            {" "}
-            • {item}{" "}
+            • {item}
           </Text>
-        ))}{" "}
-      </View>{" "}
-      {/* DETAILS */}{" "}
-      <View style={styles.card}>
-        {" "}
-        <Text style={styles.sectionTitle}>📋 Program Details</Text>{" "}
-        <View style={styles.row}>
-          {" "}
-          <Text style={styles.label}>Sessions</Text>{" "}
-          <Text style={styles.value}>{therapy?.totalSessions}</Text>{" "}
-        </View>{" "}
-        <View style={styles.row}>
-          {" "}
-          <Text style={styles.label}>Gap</Text>{" "}
-          <Text style={styles.value}>{therapy?.sessionGapDays} days</Text>{" "}
-        </View>{" "}
-        <View style={styles.row}>
-          {" "}
-          <Text style={styles.label}>Total Duration</Text>{" "}
-          <Text style={styles.value}>
-            {therapy?.totalDurationDays} days
-          </Text>{" "}
-        </View>{" "}
+        ))}
       </View>
+
+      <View style={styles.card}>
+        <Text style={styles.sectionTitle}>📋 Program Details</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Sessions</Text>
+          <Text style={styles.value}>{therapy?.totalSessions}</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Gap</Text>
+          <Text style={styles.value}>{therapy?.sessionGapDays} days</Text>
+        </View>
+        <View style={styles.row}>
+          <Text style={styles.label}>Total Duration</Text>
+          <Text style={styles.value}>{therapy?.totalDurationDays} days</Text>
+        </View>
+      </View>
+
       {therapy.consultationRequired && (
         <View style={styles.warning}>
           <Text style={styles.warningText}>
@@ -266,6 +245,7 @@ export default function TherapyDetailScreen({ route, navigation }) {
           </Text>
         </View>
       )}
+
       {therapy.consultationRequired && (
         <TouchableOpacity
           style={styles.prescriptionBtn}
@@ -280,6 +260,7 @@ export default function TherapyDetailScreen({ route, navigation }) {
           <Text style={{ color: "#fff" }}>Upload Prescription</Text>
         </TouchableOpacity>
       )}
+
       {existingBooking ? (
         <View style={styles.statusBox}>
           <Text style={styles.statusText}>
@@ -367,6 +348,35 @@ export default function TherapyDetailScreen({ route, navigation }) {
             </View>
           )}
 
+          <View style={styles.card}>
+            <Text style={styles.sectionTitle}>Payment Method</Text>
+            <View style={styles.paymentRow}>
+              {THERAPY_PAYMENT_METHODS.map((method) => (
+                <TouchableOpacity
+                  key={method.key}
+                  style={[
+                    styles.paymentChip,
+                    paymentMethod === method.key && styles.paymentChipSelected,
+                  ]}
+                  onPress={() => setPaymentMethod(method.key)}
+                >
+                  <Text
+                    style={[
+                      styles.paymentText,
+                      paymentMethod === method.key &&
+                        styles.paymentTextSelected,
+                    ]}
+                  >
+                    {method.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+            <Text style={styles.summaryText}>
+              Total to pay now: ₹ {therapy?.cost || 0}
+            </Text>
+          </View>
+
           <TouchableOpacity
             style={[
               styles.bookBtn,
@@ -378,11 +388,12 @@ export default function TherapyDetailScreen({ route, navigation }) {
             {loading ? (
               <ActivityIndicator color="#fff" />
             ) : (
-              <Text style={{ color: "#fff" }}>Confirm Booking</Text>
+              <Text style={{ color: "#fff" }}>Pay & Confirm Booking</Text>
             )}
           </TouchableOpacity>
         </>
       )}
+
       <View style={{ height: 60 }} />
     </ScrollView>
   );
@@ -427,13 +438,12 @@ const styles = StyleSheet.create({
   priceLabel: { fontSize: 13, color: "#666" },
   price: { fontSize: 22, fontWeight: "bold", color: "#1B5E20", marginTop: 4 },
   card: {
-    backgroundColor: "#FFFFFF",
-    padding: 18,
-    borderRadius: 20,
-    marginBottom: 18,
-    elevation: 4,
+    backgroundColor: "#fff",
+    padding: 15,
+    borderRadius: 15,
+    marginVertical: 10,
   },
-  sectionTitle: { fontSize: 16, fontWeight: "bold", marginBottom: 10 },
+  sectionTitle: { fontWeight: "bold", marginBottom: 6 },
   text: { fontSize: 14, color: "#555", lineHeight: 22 },
   benefit: { fontSize: 14, color: "#444", marginBottom: 6 },
   row: {
@@ -472,13 +482,6 @@ const styles = StyleSheet.create({
     marginVertical: 10,
   },
   selectedDate: { fontWeight: "600", color: "#1B5E20", marginBottom: 10 },
-  card: {
-    backgroundColor: "#fff",
-    padding: 15,
-    borderRadius: 15,
-    marginVertical: 10,
-  },
-  sectionTitle: { fontWeight: "bold", marginBottom: 6 },
   centerCard: {
     backgroundColor: "#f9f9f9",
     padding: 12,
@@ -510,5 +513,32 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     alignItems: "center",
     marginTop: 10,
+  },
+  paymentRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    marginBottom: 10,
+  },
+  paymentChip: {
+    backgroundColor: "#EEF2FF",
+    borderRadius: 18,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginRight: 8,
+    marginBottom: 8,
+  },
+  paymentChipSelected: {
+    backgroundColor: "#1B5E20",
+  },
+  paymentText: {
+    color: "#1E293B",
+    fontWeight: "600",
+  },
+  paymentTextSelected: {
+    color: "#fff",
+  },
+  summaryText: {
+    color: "#334155",
+    fontWeight: "600",
   },
 });
